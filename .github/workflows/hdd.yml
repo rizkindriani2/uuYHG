@@ -51,16 +51,16 @@ jobs:
           # Daftar 11 worker
           WORKERS=(
             "https://noisy-pine-708c.kikkk8022.workers.dev/?url="
-            "https://super-rice-2b3b.kikkk8022.workers.dev/"
-            "https://steep-mouse-8705.kikkk8022.workers.dev/"
-            "https://solitary-hall-c937.kikkk8022.workers.dev/"
-            "https://broad-sea-6cc2.kikkk8022.workers.dev/"
-            "https://snowy-glitter-16cc.kikkk8022.workers.dev/"
-            "https://noisy-mountain-87f1.kikkk8022.workers.dev/"
-            "https://shiny-morning-2b8b.kikkk8022.workers.dev/"
-            "https://aged-lab-735b.kikkk8022.workers.dev/"
-            "https://blue-frog-0993.kikkk8022.workers.dev/"
-            "https://wispy-math-b156.kikkk8022.workers.dev/"
+            "https://super-rice-2b3b.kikkk8022.workers.dev/?url="
+            "https://steep-mouse-8705.kikkk8022.workers.dev/?url="
+            "https://solitary-hall-c937.kikkk8022.workers.dev/?url="
+            "https://broad-sea-6cc2.kikkk8022.workers.dev/?url="
+            "https://snowy-glitter-16cc.kikkk8022.workers.dev/?url="
+            "https://noisy-mountain-87f1.kikkk8022.workers.dev/?url="
+            "https://shiny-morning-2b8b.kikkk8022.workers.dev/?url="
+            "https://aged-lab-735b.kikkk8022.workers.dev/?url="
+            "https://blue-frog-0993.kikkk8022.workers.dev/?url="
+            "https://wispy-math-b156.kikkk8022.workers.dev/?url="
           )
           # Pilih acak berdasarkan shard + timestamp
           SHARD_INDEX=${{ matrix.shard }}
